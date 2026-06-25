@@ -1,7 +1,49 @@
 body {
     font-family: Arial, sans-serif;
+    width: 300px;
     margin: 20px;
     padding: 0;
     background-color: rgb(61, 61, 61);
     color: white;
+}
+
+div {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.head {
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
+
+.head > h1 {
+    text-align: center;
+    margin: 0;
+    padding: 0;
+}
+
+input[type="text"] {
+    width: 33.4%;
+    padding: 5px;
+    margin-right: 3px;
+    border: none;
+    border-radius: 5px;
+}
+
+.time > input[type="button"] {
+    width: 10%;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+.func {
+    margin-top: 10px;
+}
+
+.func > input[type="button"] {
+    width: 100%;
+    padding: 5px;
+    margin-bottom: 5px;
+    border-radius: 5px;
 }
