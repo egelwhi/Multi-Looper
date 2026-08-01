@@ -1,6 +1,7 @@
 const timeContainer = document.getElementById('timeContainer');
 const timeSections = timeContainer.getElementsByClassName('time');
 
+// Add button
 timeContainer.addEventListener('click', (event) => {
     const addButton = event.target.closest('.add_time_section');
 
@@ -23,6 +24,7 @@ timeContainer.addEventListener('click', (event) => {
     timeContainer.appendChild(newTimeSection);
 });
 
+// Delete button
 timeContainer.addEventListener('click', (event) => {
     const deleteButton = event.target.closest('.delete_time_section');
 
@@ -34,4 +36,18 @@ timeContainer.addEventListener('click', (event) => {
 
     // Remove the current time section
     currentTimeSection.remove();
+});
+
+// Reset button
+timeContainer.addEventListener('click', (event) => {
+    const resetButton = event.target.closest('.reset_time');
+
+    if (!resetButton) {
+        return;
+    }
+
+    // Reset the time section
+    const currentTimeSection = resetButton.closest('.time');
+    currentTimeSection.getElementsByClassName('start_time')[0].value = '';
+    currentTimeSection.getElementsByClassName('end_time')[0].value = '';
 });
