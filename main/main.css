@@ -47,3 +47,7 @@ input[type="text"] {
     margin-bottom: 5px;
     border-radius: 5px;
 }
+
+.hide {
+    display: none;
+}
