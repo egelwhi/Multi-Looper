@@ -1,8 +1,10 @@
+const timeQueue = [];
+
 // Start multi-looper logic
 document.getElementById('startBtn').addEventListener('click', function() {
     //get all time sections and store them in a queue
     const timeSections = document.getElementsByClassName('time');
-    const timeQueue = [];
+    
 
     //put all the time sections into a queue
     for (let i = 0; i < timeSections.length; i++) {
@@ -13,11 +15,12 @@ document.getElementById('startBtn').addEventListener('click', function() {
 
     // place holder for the logic to start the multi-looper with the timeQueue
     console.log(timeQueue);
+    console.log(timeQueue.length); 
 });
 
 // Pause multi-looper logic
 function pause(){
-
+    // place holder for the logic to pause the multi-looper
 }
 
 document.getElementById('pauseBtn').addEventListener('click', function() {
@@ -28,7 +31,9 @@ document.getElementById('pauseBtn').addEventListener('click', function() {
 document.getElementById('resetBtn').addEventListener('click', function() {
     const timeSections = document.getElementsByClassName('time');
     pause();
+    timeQueue.length = 0; // Clear the time queue
 
+    // Reset all UI time sections
     for (let i = 0; i < timeSections.length; i++) {
         timeSections[i].getElementsByClassName('start_time')[0].value = '';
         timeSections[i].getElementsByClassName('end_time')[0].value = '';
