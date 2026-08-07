@@ -51,3 +51,27 @@ input[type="text"] {
 .hide {
     display: none;
 }
+
+.status {
+    display: flex;
+    align-items: center;
+    margin-left: 5px;
+    margin-bottom: 0px;
+    margin-top: 0px;
+}
+
+.notReady {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: red;
+    margin-right: 5px;
+}
+
+.loopReady {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: green;
+    margin-right: 5px;
+}
