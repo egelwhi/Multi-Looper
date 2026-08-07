@@ -1,5 +1,4 @@
 const timeContainer = document.getElementById('timeContainer');
-const timeSections = timeContainer.getElementsByClassName('time');
 
 // Add button
 timeContainer.addEventListener('click', (event) => {

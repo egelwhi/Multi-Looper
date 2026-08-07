@@ -1,3 +1,4 @@
+/* Whole Page*/
 body {
     font-family: Arial, sans-serif;
     width: 300px;
@@ -12,6 +13,7 @@ div {
     margin-bottom: 10px;
 }
 
+/* Header */
 .head {
     margin-top: 30px;
     margin-bottom: 30px;
@@ -23,6 +25,7 @@ div {
     padding: 0;
 }
 
+/* Time Sections */
 input[type="text"] {
     width: 33.4%;
     padding: 5px;
@@ -37,21 +40,7 @@ input[type="text"] {
     border-radius: 5px;
 }
 
-.func {
-    margin-top: 10px;
-}
-
-.func > input[type="button"] {
-    width: 100%;
-    padding: 5px;
-    margin-bottom: 5px;
-    border-radius: 5px;
-}
-
-.hide {
-    display: none;
-}
-
+/* Status */
 .status {
     display: flex;
     align-items: center;
@@ -74,4 +63,25 @@ input[type="text"] {
     border-radius: 50%;
     background-color: green;
     margin-right: 5px;
+}
+
+/* Function Buttons */
+.func {
+    margin-top: 10px;
+}
+
+.func > input[type="button"] {
+    width: 100%;
+    padding: 5px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+}
+
+.hide {
+    display: none;
+}
+
+.disabled {
+    opacity: 0.5;
+    pointer-events: none;
 }
