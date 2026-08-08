@@ -10,22 +10,29 @@
     </div>
 
     <hr>
-
-    <div class="time">
-        <input type="text" id="start">
-        <input type="text" id="end">
-        <input type="button" value="&#10227" id="resetTime">
-        <input type="button" value="+" id="addSection">
+    <div id="timeContainer">
+        <div class="time">
+            <input type="text" class="start_time">
+            <input type="text" class="end_time">
+            <input type="button" value="&#10227" class="reset_time">
+            <input type="button" value="+" class="add_time_section">
+            <input type="button" value="-"class="delete_time_section hide">
+        </div>
     </div>
 
     <hr>
     
     <div class="func">
-        <input type="button" value="Start" id="startBtn">
-        <input type="button" value="Pause" id="pauseBtn">
-        <input type="button" value="Reset" id="resetBtn">
+        <div class="status">
+            <div class="statusLight notReady"></div><p>Status: Not Ready</p>
+        </div>
+        <input type="button" value="Start" id="startBtn" class="disabled">
+        <input type="button" value="Pause" id="pauseBtn" class="disabled">
+        <input type="button" value="Reset" id="resetBtn" class="disabled">
+        <input type="button" value="Re-Initialize" id="reInit" class="disabled hide">
     </div>
 
-    <script src="main.js"></script>
+    <script defer src="timebox.js"></script>
+    <script defer src="funcbox.js"></script>
 </body>
 </html>
