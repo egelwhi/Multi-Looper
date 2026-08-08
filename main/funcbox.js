@@ -1,5 +1,75 @@
-// UI script: handles popup UI and communicates with content script (video logic)
+function getTabStateKeys(tabId) {
+    return {
+        statusKey: `multiLooper_status_${tabId}`,
+        timeQueueKey: `multiLooper_timeQueue_${tabId}`,
+    };
+}
 
+let activeTabId = null;
+let saveQueueTimer = null;
+
+function saveCurrentQueueForActiveTab() {
+    if (typeof activeTabId !== 'number') return;
+
+    const { timeQueueKey } = getTabStateKeys(activeTabId);
+    chrome.storage.local.set({ [timeQueueKey]: collectTimeQueueFromUI() });
+}
+
+function scheduleQueueSave() {
+    if (saveQueueTimer) clearTimeout(saveQueueTimer);
+    saveQueueTimer = setTimeout(() => {
+        saveQueueTimer = null;
+        saveCurrentQueueForActiveTab();
+    }, 50);
+}
+
+function restoreState(tabId){
+    if (typeof tabId !== 'number') return;
+
+    const { statusKey, timeQueueKey } = getTabStateKeys(tabId);
+    chrome.storage.local.get([statusKey, timeQueueKey], (result) => {
+        updateStatusDisplay(result[statusKey] || 'uninitialized');
+        if (result[timeQueueKey]) {
+            const timeQueue = result[timeQueueKey];
+            resetTimeSectionsUI();
+            const timeSections = document.getElementsByClassName('time');
+            for (let i = 0; i < timeQueue.length; i++) {
+                if (i >= timeSections.length) {
+                    // If there are more timeQueue items than existing time sections, add new sections
+                    const addBtn = document.getElementsByClassName('add_time_section')[0];
+                    if (addBtn) addBtn.click();
+                }
+                const startInput = timeSections[i].getElementsByClassName('start_time')[0];
+                const endInput = timeSections[i].getElementsByClassName('end_time')[0];
+                if (startInput) startInput.value = timeQueue[i].startTime;
+                if (endInput) endInput.value = timeQueue[i].endTime;
+            }
+        }
+    });
+}
+
+function loadActiveTabState() {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (!tabs || tabs.length === 0) {
+            restoreState();
+            return;
+        }
+
+        activeTabId = tabs[0].id;
+        const tabId = activeTabId;
+        chrome.tabs.sendMessage(tabId, { type: 'get_status' }, (response) => {
+            // Prefer explicit playing/paused flags from the content script so we
+            // don't overwrite the stored status restored from chrome.storage.
+            if (response) {
+                if (response.isPlaying) updateStatusDisplay('playing');
+                else if (response.isPaused) updateStatusDisplay('paused');
+                else if (response.isInitialized) updateStatusDisplay('ready');
+                else if (response.queueLength === 0) updateStatusDisplay('no_video');
+            }
+            restoreState(tabId);
+        });
+    });
+}
 function collectTimeQueueFromUI() {
     const timeQueue = [];
     const timeSections = document.getElementsByClassName('time');
@@ -10,6 +80,7 @@ function collectTimeQueueFromUI() {
         const endTime = endInput ? endInput.value : '';
         timeQueue.push({ startTime, endTime });
     }
+
     return timeQueue;
 }
 
@@ -56,6 +127,7 @@ function updateStatusDisplay(state, info) {
     if (!stateDisplay || !light) return;
 
     switch (state) {
+        case 'queue_set':
         case 'ready':
             stateDisplay.textContent = 'Status: Ready to Loop';
             light.className = 'statusLight';
@@ -79,6 +151,14 @@ function updateStatusDisplay(state, info) {
             light.className = 'statusLight';
             light.classList.add('paused');
             buttonState('startBtn', 'enable');
+            buttonState('pauseBtn', 'disable');
+            buttonState('resetBtn', 'enable');
+            break;
+        case 'no_queue':
+            stateDisplay.textContent = 'Status: No time sections defined';
+            light.className = 'statusLight';
+            light.classList.add('warning');
+            buttonState('startBtn', 'disable');
             buttonState('pauseBtn', 'disable');
             buttonState('resetBtn', 'enable');
             break;
@@ -118,6 +198,21 @@ function init_buttons() {
     const pauseBtnEl = document.getElementById('pauseBtn');
     const resetBtnEl = document.getElementById('resetBtn');
     const reInitBtnEl = document.getElementById('reInit');
+    const timeContainer = document.getElementById('timeContainer');
+
+    if (timeContainer) {
+        timeContainer.addEventListener('input', (event) => {
+            if (event.target.closest('.start_time, .end_time')) {
+                scheduleQueueSave();
+            }
+        });
+
+        timeContainer.addEventListener('click', (event) => {
+            if (event.target.closest('.add_time_section, .delete_time_section, .reset_time')) {
+                scheduleQueueSave();
+            }
+        });
+    }
 
     if (startBtnEl) {
         startBtnEl.addEventListener('click', () => {
@@ -141,6 +236,7 @@ function init_buttons() {
     if (resetBtnEl) {
         resetBtnEl.addEventListener('click', () => {
             resetTimeSectionsUI();
+            scheduleQueueSave();
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (!tabs || tabs.length === 0) return;
                 chrome.tabs.sendMessage(tabs[0].id, { type: 'reset' });
@@ -169,22 +265,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // When popup loads, wire buttons and request initial status from active tab
 if (document.readyState !== 'loading') {
     init_buttons();
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (!tabs || tabs.length === 0) return;
-        chrome.tabs.sendMessage(tabs[0].id, { type: 'get_status' }, (response) => {
-            if (response && response.isInitialized) updateStatusDisplay('ready');
-            else if (response && response.queueLength === 0) updateStatusDisplay('no_video');
-        });
-    });
+    loadActiveTabState();
 } else {
     document.addEventListener('DOMContentLoaded', () => {
         init_buttons();
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (!tabs || tabs.length === 0) return;
-            chrome.tabs.sendMessage(tabs[0].id, { type: 'get_status' }, (response) => {
-                if (response && response.isInitialized) updateStatusDisplay('ready');
-                else if (response && response.queueLength === 0) updateStatusDisplay('no_video');
-            });
-        });
+        loadActiveTabState();
     });
 }

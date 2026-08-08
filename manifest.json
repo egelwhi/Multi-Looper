@@ -3,13 +3,14 @@
   "description": "A video looper extension that allows users to loop multiple specific sections of a video.",
   "version": "0.1",
   "manifest_version": 3,
+  "permissions": ["storage", "activeTab", "scripting"],
   "action": {
     "default_popup": "main/main.html",
     "default_icon": "logo.png"
   },
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/watch*", "https://www.bilibili.com/video/*"],
+      "matches": ["<all_urls>"],
       "js": ["content/logic.js"],
       "run_at": "document_end"
     }

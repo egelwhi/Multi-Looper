@@ -1,17 +1,36 @@
-// Content script: video control and message-based API
-
 let timeQueue = [];
+
 let video = null;
 let videoLength = 0;
+
+let status = 'uninitialized';
 let isInitialized = false;
 let isPlaying = false;
 let isPaused = false;
+
 let currentIndex = 0;
 let timeUpdateHandler = null;
 let targetEnd = 0;
 
+function getTabStateKeys(tabId) {
+    return {
+        statusKey: `multiLooper_status_${tabId}`,
+        timeQueueKey: `multiLooper_timeQueue_${tabId}`,
+    };
+}
+
+function saveTabState(tabId) {
+    if (typeof tabId !== 'number') return;
+
+    const { statusKey, timeQueueKey } = getTabStateKeys(tabId);
+    chrome.storage.local.set({ [statusKey]: status, [timeQueueKey]: timeQueue }, () => {
+        console.log('[multi-looper] Saved tab state:', { tabId, status, timeQueue });
+    });
+}
+
 function sendStatus(state, extra = {}) {
     console.log('[multi-looper] sendStatus', state, extra);
+    status = state;
     chrome.runtime.sendMessage(Object.assign({ type: 'status', state, videoLength, currentIndex }, extra));
 }
 
@@ -36,15 +55,19 @@ function setTimeQueue(queue) {
     sendStatus('queue_set', { queueLength: timeQueue.length });
 }
 
-function startSection(idx) {
+function startSection() {
     if (!video) return sendStatus('no_video');
-    if (idx >= timeQueue.length) {
+    if (isPaused) {
         isPlaying = false;
         sendStatus('finished');
         return;
     }
 
-    const { startTime, endTime } = timeQueue[idx];
+    if (currentIndex < 0 || currentIndex >= timeQueue.length) {
+        currentIndex = 0;
+    }
+
+    const { startTime, endTime } = timeQueue[currentIndex];
     targetEnd = endTime;
     try { video.currentTime = startTime; } catch (e) {}
     video.play();
@@ -60,16 +83,17 @@ function startSection(idx) {
         }
     };
     video.addEventListener('timeupdate', timeUpdateHandler);
-    sendStatus('playing_section', { currentIndex: idx, startTime, endTime });
+    sendStatus('playing', { currentIndex: currentIndex, startTime, endTime });
 }
 
 function play() {
     if (!isInitialized) initVideo();
     if (!video) return sendStatus('no_video');
     if (!timeQueue || timeQueue.length === 0) return sendStatus('no_queue', { message: 'No time sections defined' });
+
     isPlaying = true;
     isPaused = false;
-    startSection(currentIndex);
+    startSection();
     sendStatus('playing');
 }
 
@@ -93,6 +117,7 @@ function reset() {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg || !msg.type) return;
+    const tabId = sender && sender.tab ? sender.tab.id : undefined;
     switch (msg.type) {
         case 'init_video':
             initVideo();
@@ -121,10 +146,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         default:
             break;
     }
+    saveTabState(tabId);
     return true;
 });
 
-// Try to initialize eagerly when content script loads
 if (document.readyState !== 'loading') {
     initVideo();
 } else {
