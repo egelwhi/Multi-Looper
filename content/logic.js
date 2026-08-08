@@ -3,6 +3,7 @@ let timeQueue = [];
 let video = null;
 let videoLength = 0;
 
+let status = 'uninitialized';
 let isInitialized = false;
 let isPlaying = false;
 let isPaused = false;
@@ -13,6 +14,7 @@ let targetEnd = 0;
 
 function sendStatus(state, extra = {}) {
     console.log('[multi-looper] sendStatus', state, extra);
+    status = state;
     chrome.runtime.sendMessage(Object.assign({ type: 'status', state, videoLength, currentIndex }, extra));
 }
 
@@ -65,7 +67,7 @@ function startSection() {
         }
     };
     video.addEventListener('timeupdate', timeUpdateHandler);
-    sendStatus('playing_section', { currentIndex: currentIndex, startTime, endTime });
+    sendStatus('playing', { currentIndex: currentIndex, startTime, endTime });
 }
 
 function play() {
@@ -127,10 +129,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         default:
             break;
     }
+    chrome.storage.local.set({ status, timeQueue }, () => {
+        console.log('[multi-looper] Status and time queue saved to storage:', { status, timeQueue });
+    });
     return true;
 });
 
 // Try to initialize eagerly when content script loads
+chrome.storage.local.set({ status: 'uninitialized', timeQueue: [] }, () => { // Reset status and time queue in storage
+    console.log('[multi-looper] Initializing content script, resetting status and time queue in storage');
+});
+
 if (document.readyState !== 'loading') {
     initVideo();
 } else {

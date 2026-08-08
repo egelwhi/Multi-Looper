@@ -1,4 +1,25 @@
-// UI script: handles popup UI and communicates with content script (video logic)
+function restoreState(){
+    chrome.storage.local.get(['status', 'timeQueue'], (result) => {
+        if (result.status) {
+            updateStatusDisplay(result.status);
+        }
+        if (result.timeQueue) {
+            const timeQueue = result.timeQueue;
+            const timeSections = document.getElementsByClassName('time');
+            for (let i = 0; i < timeQueue.length; i++) {
+                if (i >= timeSections.length) {
+                    // If there are more timeQueue items than existing time sections, add new sections
+                    const addBtn = document.getElementsByClassName('add_time_section')[0];
+                    if (addBtn) addBtn.click();
+                }
+                const startInput = timeSections[i].getElementsByClassName('start_time')[0];
+                const endInput = timeSections[i].getElementsByClassName('end_time')[0];
+                if (startInput) startInput.value = timeQueue[i].startTime;
+                if (endInput) endInput.value = timeQueue[i].endTime;
+            }
+        }
+    });
+}
 
 function collectTimeQueueFromUI() {
     const timeQueue = [];
@@ -10,6 +31,7 @@ function collectTimeQueueFromUI() {
         const endTime = endInput ? endInput.value : '';
         timeQueue.push({ startTime, endTime });
     }
+
     return timeQueue;
 }
 
@@ -169,6 +191,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // When popup loads, wire buttons and request initial status from active tab
 if (document.readyState !== 'loading') {
     init_buttons();
+    restoreState();
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (!tabs || tabs.length === 0) return;
         chrome.tabs.sendMessage(tabs[0].id, { type: 'get_status' }, (response) => {
@@ -179,6 +202,7 @@ if (document.readyState !== 'loading') {
 } else {
     document.addEventListener('DOMContentLoaded', () => {
         init_buttons();
+        restoreState();
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (!tabs || tabs.length === 0) return;
             chrome.tabs.sendMessage(tabs[0].id, { type: 'get_status' }, (response) => {
