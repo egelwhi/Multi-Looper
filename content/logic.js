@@ -1,11 +1,12 @@
-// Content script: video control and message-based API
-
 let timeQueue = [];
+
 let video = null;
 let videoLength = 0;
+
 let isInitialized = false;
 let isPlaying = false;
 let isPaused = false;
+
 let currentIndex = 0;
 let timeUpdateHandler = null;
 let targetEnd = 0;
@@ -36,15 +37,19 @@ function setTimeQueue(queue) {
     sendStatus('queue_set', { queueLength: timeQueue.length });
 }
 
-function startSection(idx) {
+function startSection() {
     if (!video) return sendStatus('no_video');
-    if (idx >= timeQueue.length) {
+    if (isPaused) {
         isPlaying = false;
         sendStatus('finished');
         return;
     }
 
-    const { startTime, endTime } = timeQueue[idx];
+    if (currentIndex < 0 || currentIndex >= timeQueue.length) {
+        currentIndex = 0;
+    }
+
+    const { startTime, endTime } = timeQueue[currentIndex];
     targetEnd = endTime;
     try { video.currentTime = startTime; } catch (e) {}
     video.play();
@@ -60,16 +65,17 @@ function startSection(idx) {
         }
     };
     video.addEventListener('timeupdate', timeUpdateHandler);
-    sendStatus('playing_section', { currentIndex: idx, startTime, endTime });
+    sendStatus('playing_section', { currentIndex: currentIndex, startTime, endTime });
 }
 
 function play() {
     if (!isInitialized) initVideo();
     if (!video) return sendStatus('no_video');
     if (!timeQueue || timeQueue.length === 0) return sendStatus('no_queue', { message: 'No time sections defined' });
+
     isPlaying = true;
     isPaused = false;
-    startSection(currentIndex);
+    startSection();
     sendStatus('playing');
 }
 
