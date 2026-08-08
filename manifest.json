@@ -10,7 +10,7 @@
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/watch*", "https://www.bilibili.com/video/*"],
-      "js": ["main/logic.js"],
+      "js": ["content/logic.js"],
       "run_at": "document_end"
     }
   ]

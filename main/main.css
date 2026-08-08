@@ -65,6 +65,30 @@ input[type="text"] {
     margin-right: 5px;
 }
 
+.looping {
+    width: 10px;
+    height: 10px;
+    background-color: green;
+    margin-right: 5px;
+    clip-path: polygon(100% 50%, 0 0, 0 100%);
+}
+
+.paused {
+    width: 10px;
+    height: 10px;
+    background-color: yellow;
+    margin-right: 5px;
+    clip-path: polygon(0% 0%, 0% 100%, 30% 100%, 30% 0, 70% 0, 70% 100%, 100% 100%, 100% 0%);
+}
+
+.warning {
+    width: 10px;
+    height: 10px;
+    background-color: rgb(255, 251, 0);
+    margin-right: 5px;
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+
 /* Function Buttons */
 .func {
     margin-top: 10px;
