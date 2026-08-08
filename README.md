@@ -7,7 +7,7 @@ The idea for this extension came from the need to repeatedly watch specific part
 ## Features
 - Loop multiple sections of a video simultaneously
 - User-friendly interface for defining loop points
-- Support for various video platforms
+- Support for html5 video elements on web pages
 
 ## Tech Stack
 - HTML/CSS for the user interface
@@ -15,3 +15,7 @@ The idea for this extension came from the need to repeatedly watch specific part
 - Chrome Extension APIs for interacting with the browser and video elements
 
 ## Installation
+1. Clone the repository to your local machine.
+2. Open Chrome and navigate to `chrome://extensions/`.
+3. Enable "Developer mode" using the toggle switch in the top right corner.
+4. Click on "Load unpacked" and select the directory where you cloned the repository.
