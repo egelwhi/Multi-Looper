@@ -12,6 +12,22 @@ let currentIndex = 0;
 let timeUpdateHandler = null;
 let targetEnd = 0;
 
+function getTabStateKeys(tabId) {
+    return {
+        statusKey: `multiLooper_status_${tabId}`,
+        timeQueueKey: `multiLooper_timeQueue_${tabId}`,
+    };
+}
+
+function saveTabState(tabId) {
+    if (typeof tabId !== 'number') return;
+
+    const { statusKey, timeQueueKey } = getTabStateKeys(tabId);
+    chrome.storage.local.set({ [statusKey]: status, [timeQueueKey]: timeQueue }, () => {
+        console.log('[multi-looper] Saved tab state:', { tabId, status, timeQueue });
+    });
+}
+
 function sendStatus(state, extra = {}) {
     console.log('[multi-looper] sendStatus', state, extra);
     status = state;
@@ -101,6 +117,7 @@ function reset() {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg || !msg.type) return;
+    const tabId = sender && sender.tab ? sender.tab.id : undefined;
     switch (msg.type) {
         case 'init_video':
             initVideo();
@@ -129,15 +146,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         default:
             break;
     }
-    chrome.storage.local.set({ status, timeQueue }, () => {
-        console.log('[multi-looper] Status and time queue saved to storage:', { status, timeQueue });
-    });
+    saveTabState(tabId);
     return true;
-});
-
-// Try to initialize eagerly when content script loads
-chrome.storage.local.set({ status: 'uninitialized', timeQueue: [] }, () => { // Reset status and time queue in storage
-    console.log('[multi-looper] Initializing content script, resetting status and time queue in storage');
 });
 
 if (document.readyState !== 'loading') {
