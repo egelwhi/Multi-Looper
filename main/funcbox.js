@@ -1,8 +1,6 @@
 function restoreState(){
     chrome.storage.local.get(['status', 'timeQueue'], (result) => {
-        if (result.status) {
-            updateStatusDisplay(result.status);
-        }
+        updateStatusDisplay(result.status || 'uninitialized');
         if (result.timeQueue) {
             const timeQueue = result.timeQueue;
             const timeSections = document.getElementsByClassName('time');
@@ -78,6 +76,7 @@ function updateStatusDisplay(state, info) {
     if (!stateDisplay || !light) return;
 
     switch (state) {
+        case 'queue_set':
         case 'ready':
             stateDisplay.textContent = 'Status: Ready to Loop';
             light.className = 'statusLight';
@@ -101,6 +100,14 @@ function updateStatusDisplay(state, info) {
             light.className = 'statusLight';
             light.classList.add('paused');
             buttonState('startBtn', 'enable');
+            buttonState('pauseBtn', 'disable');
+            buttonState('resetBtn', 'enable');
+            break;
+        case 'no_queue':
+            stateDisplay.textContent = 'Status: No time sections defined';
+            light.className = 'statusLight';
+            light.classList.add('warning');
+            buttonState('startBtn', 'disable');
             buttonState('pauseBtn', 'disable');
             buttonState('resetBtn', 'enable');
             break;
@@ -191,23 +198,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // When popup loads, wire buttons and request initial status from active tab
 if (document.readyState !== 'loading') {
     init_buttons();
-    restoreState();
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (!tabs || tabs.length === 0) return;
+        if (!tabs || tabs.length === 0) {
+            restoreState();
+            return;
+        }
         chrome.tabs.sendMessage(tabs[0].id, { type: 'get_status' }, (response) => {
-            if (response && response.isInitialized) updateStatusDisplay('ready');
-            else if (response && response.queueLength === 0) updateStatusDisplay('no_video');
+            // Prefer explicit playing/paused flags from the content script so we
+            // don't overwrite the stored status restored from chrome.storage.
+            if (response) {
+                if (response.isPlaying) updateStatusDisplay('playing');
+                else if (response.isPaused) updateStatusDisplay('paused');
+                else if (response.isInitialized) updateStatusDisplay('ready');
+                else if (response.queueLength === 0) updateStatusDisplay('no_video');
+            }
+            restoreState();
         });
     });
 } else {
     document.addEventListener('DOMContentLoaded', () => {
         init_buttons();
-        restoreState();
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (!tabs || tabs.length === 0) return;
+            if (!tabs || tabs.length === 0) {
+                restoreState();
+                return;
+            }
             chrome.tabs.sendMessage(tabs[0].id, { type: 'get_status' }, (response) => {
-                if (response && response.isInitialized) updateStatusDisplay('ready');
-                else if (response && response.queueLength === 0) updateStatusDisplay('no_video');
+                if (response) {
+                    if (response.isPlaying) updateStatusDisplay('playing');
+                    else if (response.isPaused) updateStatusDisplay('paused');
+                    else if (response.isInitialized) updateStatusDisplay('ready');
+                    else if (response.queueLength === 0) updateStatusDisplay('no_video');
+                }
+                restoreState();
             });
         });
     });
