@@ -48,19 +48,19 @@ function restoreState(tabId){
                     const startTime = timeQueue[i].startTime;
                     const endTime = timeQueue[i].endTime;
 
-                    startInput[0].value = Math.floor(startTime / 3600) || '0';
-                    startInput[1].value = Math.floor((startTime % 3600) / 60) || '0';
-                    startInput[2].value = Math.floor(startTime % 60) || '0';
+                    startInput[0].value = Math.floor(startTime / 3600).toString().padStart(2, '0') || '00';
+                    startInput[1].value = Math.floor((startTime % 3600) / 60).toString().padStart(2, '0') || '00';
+                    startInput[2].value = Math.floor(startTime % 60).toString().padStart(2, '0') || '00';
 
-                    endInput[0].value = Math.floor(endTime / 3600) || '0';
-                    endInput[1].value = Math.floor((endTime % 3600) / 60) || '0';
-                    endInput[2].value = Math.floor(endTime % 60) || '0';
+                    endInput[0].value = Math.floor(endTime / 3600).toString().padStart(2, '0') || '00';
+                    endInput[1].value = Math.floor((endTime % 3600) / 60).toString().padStart(2, '0') || '00';
+                    endInput[2].value = Math.floor(endTime % 60).toString().padStart(2, '0') || '00';
                 }
             }
         }
     });
 
-    document.getElementById('videoLength').textContent = Math.floor(videoLength/3600) + ' : ' + Math.floor((videoLength%3600)/60) + ' : ' + Math.floor(videoLength%60);
+    updateVideoLengthDisplay();
 }
 
 function loadActiveTabState() {
@@ -126,14 +126,14 @@ function resetTimeSectionsUI() {
         const start = timeSections[i].getElementsByClassName('start_time');
         const end = timeSections[i].getElementsByClassName('end_time');
         if (start.length == 3) {
-            start[0].value = '0';
-            start[1].value = '0';
-            start[2].value = '0';
+            start[0].value = '00';
+            start[1].value = '00';
+            start[2].value = '00';
         }
         if (end.length == 3) {
-            end[0].value = '0';
-            end[1].value = '0';
-            end[2].value = '0';
+            end[0].value = '00';
+            end[1].value = '00';
+            end[2].value = '00';
         }
     }
 
@@ -148,6 +148,10 @@ function resetTimeSectionsUI() {
         if (delBtn) delBtn.classList.add('hide');
         if (addBtn) addBtn.classList.remove('hide');
     }
+}
+
+function updateVideoLengthDisplay() {
+    document.getElementById('videoLength').textContent = Math.floor(videoLength/3600).toString().padStart(2, '0') + ' : ' + Math.floor((videoLength%3600)/60).toString().padStart(2, '0') + ' : ' + Math.floor(videoLength%60).toString().padStart(2, '0');
 }
 
 function buttonState(buttonId, state) {
@@ -312,7 +316,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'status') {
         if (typeof message.videoLength === 'number' && Number.isFinite(message.videoLength)) {
             videoLength = message.videoLength;
-            document.getElementById('videoLength').textContent = Math.floor(videoLength/3600) + ' : ' + Math.floor((videoLength%3600)/60) + ' : ' + Math.floor(videoLength%60);
+            updateVideoLengthDisplay();
         }
         updateStatusDisplay(message.state, message);
     }
