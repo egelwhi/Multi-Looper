@@ -1,3 +1,5 @@
+let videoLength = 0;
+
 function getTabStateKeys(tabId) {
     return {
         statusKey: `multiLooper_status_${tabId}`,
@@ -39,13 +41,26 @@ function restoreState(tabId){
                     const addBtn = document.getElementsByClassName('add_time_section')[0];
                     if (addBtn) addBtn.click();
                 }
-                const startInput = timeSections[i].getElementsByClassName('start_time')[0];
-                const endInput = timeSections[i].getElementsByClassName('end_time')[0];
-                if (startInput) startInput.value = timeQueue[i].startTime;
-                if (endInput) endInput.value = timeQueue[i].endTime;
+
+                const startInput = timeSections[i].getElementsByClassName('start_time');
+                const endInput = timeSections[i].getElementsByClassName('end_time');
+                if (startInput.length == 3 && endInput.length == 3) {
+                    const startTime = timeQueue[i].startTime;
+                    const endTime = timeQueue[i].endTime;
+
+                    startInput[0].value = Math.floor(startTime / 3600) || '0';
+                    startInput[1].value = Math.floor((startTime % 3600) / 60) || '0';
+                    startInput[2].value = Math.floor(startTime % 60) || '0';
+
+                    endInput[0].value = Math.floor(endTime / 3600) || '0';
+                    endInput[1].value = Math.floor((endTime % 3600) / 60) || '0';
+                    endInput[2].value = Math.floor(endTime % 60) || '0';
+                }
             }
         }
     });
+
+    document.getElementById('videoLength').textContent = Math.floor(videoLength/3600) + ' : ' + Math.floor((videoLength%3600)/60) + ' : ' + Math.floor(videoLength%60);
 }
 
 function loadActiveTabState() {
@@ -61,6 +76,9 @@ function loadActiveTabState() {
             // Prefer explicit playing/paused flags from the content script so we
             // don't overwrite the stored status restored from chrome.storage.
             if (response) {
+                if (typeof response.videoLength === 'number' && Number.isFinite(response.videoLength)) {
+                    videoLength = response.videoLength;
+                }
                 if (response.isPlaying) updateStatusDisplay('playing');
                 else if (response.isPaused) updateStatusDisplay('paused');
                 else if (response.isInitialized) updateStatusDisplay('ready');
@@ -74,11 +92,29 @@ function collectTimeQueueFromUI() {
     const timeQueue = [];
     const timeSections = document.getElementsByClassName('time');
     for (let i = 0; i < timeSections.length; i++) {
-        const startInput = timeSections[i].getElementsByClassName('start_time')[0];
-        const endInput = timeSections[i].getElementsByClassName('end_time')[0];
-        const startTime = startInput ? startInput.value : '';
-        const endTime = endInput ? endInput.value : '';
-        timeQueue.push({ startTime, endTime });
+        const startInput = timeSections[i].getElementsByClassName('start_time');
+        const endInput = timeSections[i].getElementsByClassName('end_time');
+
+        if (startInput.length == 3 && endInput.length == 3) {
+            const startTime = (parseInt(startInput[0].value) * 3600) + (parseInt(startInput[1].value) * 60) + parseInt(startInput[2].value);
+            const endTime = (parseInt(endInput[0].value) * 3600) + (parseInt(endInput[1].value) * 60) + parseInt(endInput[2].value);
+
+            if (endTime >= videoLength || startTime >= videoLength) {
+                updateStatusDisplay('error', { message: 'Time exceeds video length' });
+                return [];
+            }
+
+            if (startTime > endTime) {
+                const start1 = startTime;
+                const end1 = videoLength;
+                const start2 = 0;
+                const end2 = endTime;
+                timeQueue.push({ startTime: start1, endTime: end1 });
+                timeQueue.push({ startTime: start2, endTime: end2 });
+            } else {
+                timeQueue.push({ startTime, endTime });
+            }
+        }
     }
 
     return timeQueue;
@@ -87,10 +123,18 @@ function collectTimeQueueFromUI() {
 function resetTimeSectionsUI() {
     const timeSections = document.getElementsByClassName('time');
     for (let i = 0; i < timeSections.length; i++) {
-        const start = timeSections[i].getElementsByClassName('start_time')[0];
-        const end = timeSections[i].getElementsByClassName('end_time')[0];
-        if (start) start.value = '';
-        if (end) end.value = '';
+        const start = timeSections[i].getElementsByClassName('start_time');
+        const end = timeSections[i].getElementsByClassName('end_time');
+        if (start.length == 3) {
+            start[0].value = '0';
+            start[1].value = '0';
+            start[2].value = '0';
+        }
+        if (end.length == 3) {
+            end[0].value = '0';
+            end[1].value = '0';
+            end[2].value = '0';
+        }
     }
 
     while (timeSections.length > 1) {
@@ -187,6 +231,14 @@ function updateStatusDisplay(state, info) {
             buttonState('pauseBtn', 'disable');
             buttonState('resetBtn', 'enable');
             break;
+        case 'error':
+            if (info && info.message) stateDisplay.textContent = 'Status: ' + info.message;
+            light.className = 'statusLight';
+            light.classList.add('warning');
+            buttonState('startBtn', 'disable');
+            buttonState('pauseBtn', 'disable');
+            buttonState('resetBtn', 'enable');
+            break;
         default:
             if (info && info.message) stateDisplay.textContent = 'Status: ' + info.message;
             break;
@@ -258,8 +310,13 @@ function init_buttons() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message || !message.type) return;
     if (message.type === 'status') {
+        if (typeof message.videoLength === 'number' && Number.isFinite(message.videoLength)) {
+            videoLength = message.videoLength;
+            document.getElementById('videoLength').textContent = Math.floor(videoLength/3600) + ' : ' + Math.floor((videoLength%3600)/60) + ' : ' + Math.floor(videoLength%60);
+        }
         updateStatusDisplay(message.state, message);
     }
+    
 });
 
 // When popup loads, wire buttons and request initial status from active tab

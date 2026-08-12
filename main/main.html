@@ -12,11 +12,19 @@
     <hr>
     <div id="timeContainer">
         <div class="time">
-            <input type="text" class="start_time">
-            <input type="text" class="end_time">
-            <input type="button" value="&#10227" class="reset_time">
+            <input type="text" class="start_time hr"> :
+            <input type="text" class="start_time min"> : 
+            <input type="text" class="start_time sec"> 
+
             <input type="button" value="+" class="add_time_section">
             <input type="button" value="-"class="delete_time_section hide">
+
+            <input type="text" class="end_time hr"> :
+            <input type="text" class="end_time min"> :
+            <input type="text" class="end_time sec">
+
+            <input type="button" value="&#10227" class="reset_time">
+            
         </div>
     </div>
 
@@ -26,9 +34,12 @@
         <div class="status">
             <div class="statusLight notReady"></div><p>Status: Not Ready</p>
         </div>
-        <input type="button" value="Start" id="startBtn" class="disabled">
-        <input type="button" value="Pause" id="pauseBtn" class="disabled">
-        <input type="button" value="Reset" id="resetBtn" class="disabled">
+        <div class="videoLength">
+            <p>Video Length: <span id="videoLength">0</span></p>
+        </div>
+        <input type="button" value="Start" id="startBtn" class="">
+        <input type="button" value="Pause" id="pauseBtn" class="">
+        <input type="button" value="Reset" id="resetBtn" class="">
         <input type="button" value="Re-Initialize" id="reInit" class="disabled hide">
     </div>
 
