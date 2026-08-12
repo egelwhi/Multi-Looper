@@ -45,16 +45,28 @@ function restoreState(tabId){
                 const startInput = timeSections[i].getElementsByClassName('start_time');
                 const endInput = timeSections[i].getElementsByClassName('end_time');
                 if (startInput.length == 3 && endInput.length == 3) {
-                    const startTime = timeQueue[i].startTime;
-                    const endTime = timeQueue[i].endTime;
+                    const startTime = Number(timeQueue[i].startTime);
+                    const endTime = Number(timeQueue[i].endTime);
 
-                    startInput[0].value = Math.floor(startTime / 3600).toString().padStart(2, '0') || '00';
-                    startInput[1].value = Math.floor((startTime % 3600) / 60).toString().padStart(2, '0') || '00';
-                    startInput[2].value = Math.floor(startTime % 60).toString().padStart(2, '0') || '00';
+                    if (startTime > 0) {
+                        startInput[0].value = Math.floor(startTime / 3600).toString().padStart(2, '0');
+                        startInput[1].value = Math.floor((startTime % 3600) / 60).toString().padStart(2, '0');
+                        startInput[2].value = Math.floor(startTime % 60).toString().padStart(2, '0');
+                    } else {
+                        startInput[0].value = '';
+                        startInput[1].value = '';
+                        startInput[2].value = '';
+                    }
 
-                    endInput[0].value = Math.floor(endTime / 3600).toString().padStart(2, '0') || '00';
-                    endInput[1].value = Math.floor((endTime % 3600) / 60).toString().padStart(2, '0') || '00';
-                    endInput[2].value = Math.floor(endTime % 60).toString().padStart(2, '0') || '00';
+                    if (endTime > 0) {
+                        endInput[0].value = Math.floor(endTime / 3600).toString().padStart(2, '0');
+                        endInput[1].value = Math.floor((endTime % 3600) / 60).toString().padStart(2, '0');
+                        endInput[2].value = Math.floor(endTime % 60).toString().padStart(2, '0');
+                    } else {
+                        endInput[0].value = '';
+                        endInput[1].value = '';
+                        endInput[2].value = '';
+                    }
                 }
             }
         }
@@ -88,6 +100,7 @@ function loadActiveTabState() {
         });
     });
 }
+
 function collectTimeQueueFromUI() {
     const timeQueue = [];
     const timeSections = document.getElementsByClassName('time');
@@ -96,8 +109,8 @@ function collectTimeQueueFromUI() {
         const endInput = timeSections[i].getElementsByClassName('end_time');
 
         if (startInput.length == 3 && endInput.length == 3) {
-            const startTime = (parseInt(startInput[0].value) * 3600) + (parseInt(startInput[1].value) * 60) + parseInt(startInput[2].value);
-            const endTime = (parseInt(endInput[0].value) * 3600) + (parseInt(endInput[1].value) * 60) + parseInt(endInput[2].value);
+            const startTime = Number(startInput[0].value) * 3600 + Number(startInput[1].value) * 60 + Number(startInput[2].value);
+            const endTime = Number(endInput[0].value) * 3600 + Number(endInput[1].value) * 60 + Number(endInput[2].value);
 
             if (endTime >= videoLength || startTime >= videoLength) {
                 updateStatusDisplay('error', { message: 'Time exceeds video length' });
@@ -126,14 +139,14 @@ function resetTimeSectionsUI() {
         const start = timeSections[i].getElementsByClassName('start_time');
         const end = timeSections[i].getElementsByClassName('end_time');
         if (start.length == 3) {
-            start[0].value = '00';
-            start[1].value = '00';
-            start[2].value = '00';
+            start[0].value = '';
+            start[1].value = '';
+            start[2].value = '';
         }
         if (end.length == 3) {
-            end[0].value = '00';
-            end[1].value = '00';
-            end[2].value = '00';
+            end[0].value = '';
+            end[1].value = '';
+            end[2].value = '';
         }
     }
 
@@ -277,6 +290,24 @@ function init_buttons() {
                 if (!tabs || tabs.length === 0) return;
                 chrome.tabs.sendMessage(tabs[0].id, { type: 'play', timeQueue });
             });
+
+            // Refactor number inputs to ensure they are two digits
+            const timeSections = document.getElementsByClassName('time');
+            for (let i = 0; i < timeSections.length; i++) {
+                const startInput = timeSections[i].getElementsByClassName('start_time');
+                const endInput = timeSections[i].getElementsByClassName('end_time');
+
+                if (startInput.length == 3 && endInput.length == 3) {
+                    for (let j = 0; j < 3; j++) {
+                        if (startInput[j].value !== '') {
+                            startInput[j].value = startInput[j].value.padStart(2, '0');
+                        }
+                        if (endInput[j].value !== '') {
+                            endInput[j].value = endInput[j].value.padStart(2, '0');
+                        }
+                    }
+                }
+            }
         });
     }
 
@@ -317,6 +348,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (typeof message.videoLength === 'number' && Number.isFinite(message.videoLength)) {
             videoLength = message.videoLength;
             updateVideoLengthDisplay();
+            updateStatusDisplay(message.state, message);
         }
         updateStatusDisplay(message.state, message);
     }
