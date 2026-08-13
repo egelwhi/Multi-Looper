@@ -10,6 +10,17 @@ function getTabStateKeys(tabId) {
 let activeTabId = null;
 let saveQueueTimer = null;
 
+function safeTabSendMessage(tabId, message) {
+    if (typeof tabId !== 'number') return;
+
+    chrome.tabs.sendMessage(tabId, message, () => {
+        if (chrome.runtime.lastError) {
+            // The page may have navigated or the content script may not be available yet.
+            // Ignore this because the user action itself is still handled by the current state.
+        }
+    });
+}
+
 function saveCurrentQueueForActiveTab() {
     if (typeof activeTabId !== 'number') return;
 
@@ -25,7 +36,7 @@ function scheduleQueueSave() {
     }, 50);
 }
 
-function restoreState(tabId){
+function restoreState(tabId) {
     if (typeof tabId !== 'number') return;
 
     const { statusKey, timeQueueKey } = getTabStateKeys(tabId);
@@ -112,11 +123,6 @@ function collectTimeQueueFromUI() {
             const startTime = Number(startInput[0].value) * 3600 + Number(startInput[1].value) * 60 + Number(startInput[2].value);
             const endTime = Number(endInput[0].value) * 3600 + Number(endInput[1].value) * 60 + Number(endInput[2].value);
 
-            if (endTime >= videoLength || startTime >= videoLength) {
-                updateStatusDisplay('error', { message: 'Time exceeds video length' });
-                return [];
-            }
-
             if (startTime > endTime) {
                 const start1 = startTime;
                 const end1 = videoLength;
@@ -128,9 +134,21 @@ function collectTimeQueueFromUI() {
                 timeQueue.push({ startTime, endTime });
             }
         }
+
+        scheduleQueueSave(); // Schedule a save after collecting the queue
     }
 
     return timeQueue;
+}
+
+function checkTimeQueueValidity(timeQueue) {
+    for (let i = 0; i < timeQueue.length; i++) {
+        const { startTime, endTime } = timeQueue[i];
+        if (startTime >= videoLength || endTime >= videoLength) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function resetTimeSectionsUI() {
@@ -164,7 +182,7 @@ function resetTimeSectionsUI() {
 }
 
 function updateVideoLengthDisplay() {
-    document.getElementById('videoLength').textContent = Math.floor(videoLength/3600).toString().padStart(2, '0') + ' : ' + Math.floor((videoLength%3600)/60).toString().padStart(2, '0') + ' : ' + Math.floor(videoLength%60).toString().padStart(2, '0');
+    document.getElementById('videoLength').textContent = Math.floor(videoLength / 3600).toString().padStart(2, '0') + ' : ' + Math.floor((videoLength % 3600) / 60).toString().padStart(2, '0') + ' : ' + Math.floor(videoLength % 60).toString().padStart(2, '0');
 }
 
 function buttonState(buttonId, state) {
@@ -286,27 +304,31 @@ function init_buttons() {
     if (startBtnEl) {
         startBtnEl.addEventListener('click', () => {
             const timeQueue = collectTimeQueueFromUI();
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                if (!tabs || tabs.length === 0) return;
-                chrome.tabs.sendMessage(tabs[0].id, { type: 'play', timeQueue });
-            });
+            if (checkTimeQueueValidity(timeQueue)) {
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (!tabs || tabs.length === 0) return;
+                    safeTabSendMessage(tabs[0].id, { type: 'play', timeQueue });
+                });
 
-            // Refactor number inputs to ensure they are two digits
-            const timeSections = document.getElementsByClassName('time');
-            for (let i = 0; i < timeSections.length; i++) {
-                const startInput = timeSections[i].getElementsByClassName('start_time');
-                const endInput = timeSections[i].getElementsByClassName('end_time');
+                // Refactor number inputs to ensure they are two digits
+                const timeSections = document.getElementsByClassName('time');
+                for (let i = 0; i < timeSections.length; i++) {
+                    const startInput = timeSections[i].getElementsByClassName('start_time');
+                    const endInput = timeSections[i].getElementsByClassName('end_time');
 
-                if (startInput.length == 3 && endInput.length == 3) {
-                    for (let j = 0; j < 3; j++) {
-                        if (startInput[j].value !== '') {
-                            startInput[j].value = startInput[j].value.padStart(2, '0');
-                        }
-                        if (endInput[j].value !== '') {
-                            endInput[j].value = endInput[j].value.padStart(2, '0');
+                    if (startInput.length == 3 && endInput.length == 3) {
+                        for (let j = 0; j < 3; j++) {
+                            if (startInput[j].value !== '') {
+                                startInput[j].value = startInput[j].value.padStart(2, '0');
+                            }
+                            if (endInput[j].value !== '') {
+                                endInput[j].value = endInput[j].value.padStart(2, '0');
+                            }
                         }
                     }
                 }
+            } else {
+                updateStatusDisplay('error', { message: 'Time exceeds video length' });
             }
         });
     }
@@ -315,7 +337,7 @@ function init_buttons() {
         pauseBtnEl.addEventListener('click', () => {
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (!tabs || tabs.length === 0) return;
-                chrome.tabs.sendMessage(tabs[0].id, { type: 'pause' });
+                safeTabSendMessage(tabs[0].id, { type: 'pause' });
             });
         });
     }
@@ -326,7 +348,7 @@ function init_buttons() {
             scheduleQueueSave();
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (!tabs || tabs.length === 0) return;
-                chrome.tabs.sendMessage(tabs[0].id, { type: 'reset' });
+                safeTabSendMessage(tabs[0].id, { type: 'reset' });
             });
         });
     }
@@ -335,7 +357,7 @@ function init_buttons() {
         reInitBtnEl.addEventListener('click', () => {
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (!tabs || tabs.length === 0) return;
-                chrome.tabs.sendMessage(tabs[0].id, { type: 'init_video' });
+                safeTabSendMessage(tabs[0].id, { type: 'init_video' });
             });
         });
     }
@@ -352,7 +374,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         updateStatusDisplay(message.state, message);
     }
-    
+
 });
 
 // When popup loads, wire buttons and request initial status from active tab

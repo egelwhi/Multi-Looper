@@ -31,9 +31,20 @@ function saveTabState(tabId) {
 }
 
 function sendStatus(state, extra = {}) {
-    console.log('[multi-looper] sendStatus', state, extra);
     status = state;
-    chrome.runtime.sendMessage(Object.assign({ type: 'status', state, videoLength, currentIndex }, extra));
+    const message = Object.assign({ type: 'status', state, videoLength, currentIndex }, extra);
+
+    try {
+        chrome.runtime.sendMessage(message, () => {
+            console.log('[multi-looper] sendStatus', state, extra);
+            if (chrome.runtime.lastError) {
+                // The popup may be closed while the content script is still running.
+                // Ignore this case because the looping logic still works without a live popup receiver.
+            }
+        });
+    } catch (e) {
+        console.debug('[multi-looper] Runtime message skipped while popup is closed', e);
+    }
 }
 
 function initVideo() {
