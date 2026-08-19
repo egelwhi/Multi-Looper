@@ -1,3 +1,5 @@
+let videoLength = 0;
+
 function getTabStateKeys(tabId) {
     return {
         statusKey: `multiLooper_status_${tabId}`,
@@ -7,6 +9,17 @@ function getTabStateKeys(tabId) {
 
 let activeTabId = null;
 let saveQueueTimer = null;
+
+function safeTabSendMessage(tabId, message) {
+    if (typeof tabId !== 'number') return;
+
+    chrome.tabs.sendMessage(tabId, message, () => {
+        if (chrome.runtime.lastError) {
+            // The page may have navigated or the content script may not be available yet.
+            // Ignore this because the user action itself is still handled by the current state.
+        }
+    });
+}
 
 function saveCurrentQueueForActiveTab() {
     if (typeof activeTabId !== 'number') return;
@@ -23,7 +36,7 @@ function scheduleQueueSave() {
     }, 50);
 }
 
-function restoreState(tabId){
+function restoreState(tabId) {
     if (typeof tabId !== 'number') return;
 
     const { statusKey, timeQueueKey } = getTabStateKeys(tabId);
@@ -39,13 +52,38 @@ function restoreState(tabId){
                     const addBtn = document.getElementsByClassName('add_time_section')[0];
                     if (addBtn) addBtn.click();
                 }
-                const startInput = timeSections[i].getElementsByClassName('start_time')[0];
-                const endInput = timeSections[i].getElementsByClassName('end_time')[0];
-                if (startInput) startInput.value = timeQueue[i].startTime;
-                if (endInput) endInput.value = timeQueue[i].endTime;
+
+                const startInput = timeSections[i].getElementsByClassName('start_time');
+                const endInput = timeSections[i].getElementsByClassName('end_time');
+                if (startInput.length == 3 && endInput.length == 3) {
+                    const startTime = Number(timeQueue[i].startTime);
+                    const endTime = Number(timeQueue[i].endTime);
+
+                    if (startTime > 0) {
+                        startInput[0].value = Math.floor(startTime / 3600).toString().padStart(2, '0');
+                        startInput[1].value = Math.floor((startTime % 3600) / 60).toString().padStart(2, '0');
+                        startInput[2].value = Math.floor(startTime % 60).toString().padStart(2, '0');
+                    } else {
+                        startInput[0].value = '';
+                        startInput[1].value = '';
+                        startInput[2].value = '';
+                    }
+
+                    if (endTime > 0) {
+                        endInput[0].value = Math.floor(endTime / 3600).toString().padStart(2, '0');
+                        endInput[1].value = Math.floor((endTime % 3600) / 60).toString().padStart(2, '0');
+                        endInput[2].value = Math.floor(endTime % 60).toString().padStart(2, '0');
+                    } else {
+                        endInput[0].value = '';
+                        endInput[1].value = '';
+                        endInput[2].value = '';
+                    }
+                }
             }
         }
     });
+
+    updateVideoLengthDisplay();
 }
 
 function loadActiveTabState() {
@@ -61,6 +99,9 @@ function loadActiveTabState() {
             // Prefer explicit playing/paused flags from the content script so we
             // don't overwrite the stored status restored from chrome.storage.
             if (response) {
+                if (typeof response.videoLength === 'number' && Number.isFinite(response.videoLength)) {
+                    videoLength = response.videoLength;
+                }
                 if (response.isPlaying) updateStatusDisplay('playing');
                 else if (response.isPaused) updateStatusDisplay('paused');
                 else if (response.isInitialized) updateStatusDisplay('ready');
@@ -70,27 +111,61 @@ function loadActiveTabState() {
         });
     });
 }
+
 function collectTimeQueueFromUI() {
     const timeQueue = [];
     const timeSections = document.getElementsByClassName('time');
     for (let i = 0; i < timeSections.length; i++) {
-        const startInput = timeSections[i].getElementsByClassName('start_time')[0];
-        const endInput = timeSections[i].getElementsByClassName('end_time')[0];
-        const startTime = startInput ? startInput.value : '';
-        const endTime = endInput ? endInput.value : '';
-        timeQueue.push({ startTime, endTime });
+        const startInput = timeSections[i].getElementsByClassName('start_time');
+        const endInput = timeSections[i].getElementsByClassName('end_time');
+
+        if (startInput.length == 3 && endInput.length == 3) {
+            const startTime = Number(startInput[0].value) * 3600 + Number(startInput[1].value) * 60 + Number(startInput[2].value);
+            const endTime = Number(endInput[0].value) * 3600 + Number(endInput[1].value) * 60 + Number(endInput[2].value);
+
+            if (startTime > endTime) {
+                const start1 = startTime;
+                const end1 = videoLength;
+                const start2 = 0;
+                const end2 = endTime;
+                timeQueue.push({ startTime: start1, endTime: end1 });
+                timeQueue.push({ startTime: start2, endTime: end2 });
+            } else {
+                timeQueue.push({ startTime, endTime });
+            }
+        }
+
+        scheduleQueueSave(); // Schedule a save after collecting the queue
     }
 
     return timeQueue;
 }
 
+function checkTimeQueueValidity(timeQueue) {
+    for (let i = 0; i < timeQueue.length; i++) {
+        const { startTime, endTime } = timeQueue[i];
+        if (startTime >= videoLength || endTime >= videoLength) {
+            return false;
+        }
+    }
+    return true;
+}
+
 function resetTimeSectionsUI() {
     const timeSections = document.getElementsByClassName('time');
     for (let i = 0; i < timeSections.length; i++) {
-        const start = timeSections[i].getElementsByClassName('start_time')[0];
-        const end = timeSections[i].getElementsByClassName('end_time')[0];
-        if (start) start.value = '';
-        if (end) end.value = '';
+        const start = timeSections[i].getElementsByClassName('start_time');
+        const end = timeSections[i].getElementsByClassName('end_time');
+        if (start.length == 3) {
+            start[0].value = '';
+            start[1].value = '';
+            start[2].value = '';
+        }
+        if (end.length == 3) {
+            end[0].value = '';
+            end[1].value = '';
+            end[2].value = '';
+        }
     }
 
     while (timeSections.length > 1) {
@@ -104,6 +179,10 @@ function resetTimeSectionsUI() {
         if (delBtn) delBtn.classList.add('hide');
         if (addBtn) addBtn.classList.remove('hide');
     }
+}
+
+function updateVideoLengthDisplay() {
+    document.getElementById('videoLength').textContent = Math.floor(videoLength / 3600).toString().padStart(2, '0') + ' : ' + Math.floor((videoLength % 3600) / 60).toString().padStart(2, '0') + ' : ' + Math.floor(videoLength % 60).toString().padStart(2, '0');
 }
 
 function buttonState(buttonId, state) {
@@ -187,6 +266,14 @@ function updateStatusDisplay(state, info) {
             buttonState('pauseBtn', 'disable');
             buttonState('resetBtn', 'enable');
             break;
+        case 'error':
+            if (info && info.message) stateDisplay.textContent = 'Status: ' + info.message;
+            light.className = 'statusLight';
+            light.classList.add('warning');
+            buttonState('startBtn', 'disable');
+            buttonState('pauseBtn', 'disable');
+            buttonState('resetBtn', 'enable');
+            break;
         default:
             if (info && info.message) stateDisplay.textContent = 'Status: ' + info.message;
             break;
@@ -217,10 +304,32 @@ function init_buttons() {
     if (startBtnEl) {
         startBtnEl.addEventListener('click', () => {
             const timeQueue = collectTimeQueueFromUI();
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                if (!tabs || tabs.length === 0) return;
-                chrome.tabs.sendMessage(tabs[0].id, { type: 'play', timeQueue });
-            });
+            if (checkTimeQueueValidity(timeQueue)) {
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (!tabs || tabs.length === 0) return;
+                    safeTabSendMessage(tabs[0].id, { type: 'play', timeQueue });
+                });
+
+                // Refactor number inputs to ensure they are two digits
+                const timeSections = document.getElementsByClassName('time');
+                for (let i = 0; i < timeSections.length; i++) {
+                    const startInput = timeSections[i].getElementsByClassName('start_time');
+                    const endInput = timeSections[i].getElementsByClassName('end_time');
+
+                    if (startInput.length == 3 && endInput.length == 3) {
+                        for (let j = 0; j < 3; j++) {
+                            if (startInput[j].value !== '') {
+                                startInput[j].value = startInput[j].value.padStart(2, '0');
+                            }
+                            if (endInput[j].value !== '') {
+                                endInput[j].value = endInput[j].value.padStart(2, '0');
+                            }
+                        }
+                    }
+                }
+            } else {
+                updateStatusDisplay('error', { message: 'Time exceeds video length' });
+            }
         });
     }
 
@@ -228,7 +337,7 @@ function init_buttons() {
         pauseBtnEl.addEventListener('click', () => {
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (!tabs || tabs.length === 0) return;
-                chrome.tabs.sendMessage(tabs[0].id, { type: 'pause' });
+                safeTabSendMessage(tabs[0].id, { type: 'pause' });
             });
         });
     }
@@ -239,7 +348,7 @@ function init_buttons() {
             scheduleQueueSave();
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (!tabs || tabs.length === 0) return;
-                chrome.tabs.sendMessage(tabs[0].id, { type: 'reset' });
+                safeTabSendMessage(tabs[0].id, { type: 'reset' });
             });
         });
     }
@@ -248,7 +357,7 @@ function init_buttons() {
         reInitBtnEl.addEventListener('click', () => {
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (!tabs || tabs.length === 0) return;
-                chrome.tabs.sendMessage(tabs[0].id, { type: 'init_video' });
+                safeTabSendMessage(tabs[0].id, { type: 'init_video' });
             });
         });
     }
@@ -258,8 +367,14 @@ function init_buttons() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message || !message.type) return;
     if (message.type === 'status') {
+        if (typeof message.videoLength === 'number' && Number.isFinite(message.videoLength)) {
+            videoLength = message.videoLength;
+            updateVideoLengthDisplay();
+            updateStatusDisplay(message.state, message);
+        }
         updateStatusDisplay(message.state, message);
     }
+
 });
 
 // When popup loads, wire buttons and request initial status from active tab

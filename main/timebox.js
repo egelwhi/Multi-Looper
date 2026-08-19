@@ -13,7 +13,11 @@ timeContainer.addEventListener('click', (event) => {
     // Clone the current time section and clear its input values
     const newTimeSection = currentTimeSection.cloneNode(true);
     newTimeSection.getElementsByClassName('start_time')[0].value = '';
+    newTimeSection.getElementsByClassName('start_time')[1].value = '';
+    newTimeSection.getElementsByClassName('start_time')[2].value = '';
     newTimeSection.getElementsByClassName('end_time')[0].value = '';
+    newTimeSection.getElementsByClassName('end_time')[1].value = '';
+    newTimeSection.getElementsByClassName('end_time')[2].value = '';
 
     // Show the delete button on the current section and hide its add button
     currentTimeSection.getElementsByClassName('delete_time_section')[0].classList.remove('hide');
@@ -48,5 +52,9 @@ timeContainer.addEventListener('click', (event) => {
     // Reset the time section
     const currentTimeSection = resetButton.closest('.time');
     currentTimeSection.getElementsByClassName('start_time')[0].value = '';
+    currentTimeSection.getElementsByClassName('start_time')[1].value = '';
+    currentTimeSection.getElementsByClassName('start_time')[2].value = '';
     currentTimeSection.getElementsByClassName('end_time')[0].value = '';
+    currentTimeSection.getElementsByClassName('end_time')[1].value = '';
+    currentTimeSection.getElementsByClassName('end_time')[2].value = '';
 });
