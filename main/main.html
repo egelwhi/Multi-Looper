@@ -12,15 +12,15 @@
     <hr>
     <div id="timeContainer">
         <div class="time">
-            <input type="text" class="start_time hr" placeholder="00"> :
-            <input type="text" class="start_time min" placeholder="00"> : 
+            <input type="text" class="start_time hr" placeholder="00"> <span class="colon">:</span>
+            <input type="text" class="start_time min" placeholder="00"> <span class="colon">:</span>
             <input type="text" class="start_time sec" placeholder="00"> 
 
             <input type="button" value="+" class="add_time_section">
             <input type="button" value="-"class="delete_time_section hide">
 
-            <input type="text" class="end_time hr" placeholder="00"> :
-            <input type="text" class="end_time min" placeholder="00"> :
+            <input type="text" class="end_time hr" placeholder="00"> <span class="colon">:</span>
+            <input type="text" class="end_time min" placeholder="00"> <span class="colon">:</span>
             <input type="text" class="end_time sec" placeholder="00">
 
             <input type="button" value="&#10227" class="reset_time">
@@ -28,14 +28,10 @@
         </div>
     </div>
 
-    <hr>
     
     <div class="func">
         <div class="status">
-            <div class="statusLight notReady"></div><p>Status: Not Ready</p>
-        </div>
-        <div class="videoLength">
-            <p>Video Length: <span id="videoLength">0</span></p>
+            <div class="statusLight notReady"></div><p>Status: Not Ready</p> <span class="videoLength" id="videoLength">0</span>
         </div>
         <input type="button" value="Start" id="startBtn" class="">
         <input type="button" value="Pause" id="pauseBtn" class="">
