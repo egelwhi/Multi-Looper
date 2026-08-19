@@ -182,7 +182,7 @@ function resetTimeSectionsUI() {
 }
 
 function updateVideoLengthDisplay() {
-    document.getElementById('videoLength').textContent = Math.floor(videoLength / 3600).toString().padStart(2, '0') + ' : ' + Math.floor((videoLength % 3600) / 60).toString().padStart(2, '0') + ' : ' + Math.floor(videoLength % 60).toString().padStart(2, '0');
+    document.getElementById('videoLength').textContent = Math.floor(videoLength / 3600).toString().padStart(2, '0') + ': ' + Math.floor((videoLength % 3600) / 60).toString().padStart(2, '0') + ': ' + Math.floor(videoLength % 60).toString().padStart(2, '0');
 }
 
 function buttonState(buttonId, state) {
@@ -247,7 +247,7 @@ function updateStatusDisplay(state, info) {
             light.classList.add('warning');
             buttonState('startBtn', 'disable');
             buttonState('pauseBtn', 'disable');
-            buttonState('resetBtn', 'enable');
+            buttonState('resetBtn', 'disable');
             buttonState('reInit', 'enable');
             break;
         case 'reset':
