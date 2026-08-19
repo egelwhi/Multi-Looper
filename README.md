@@ -8,6 +8,7 @@ The idea for this extension came from the need to repeatedly watch specific part
 - Loop multiple sections of a video simultaneously
 - User-friendly interface for defining loop points
 - Support for html5 video elements on web pages
+  - Tested on YouTube and Bilibili
 
 ## Tech Stack
 - HTML/CSS for the user interface
