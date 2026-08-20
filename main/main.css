@@ -109,13 +109,17 @@ input[type="text"]:focus::placeholder {
     margin-top: 0px;
 }
 
-.videoLength {
-    margin-left: auto;
+#videoLength {
+    margin-left: 2px;
     margin-right: 10px;
 }
 
-.videoLength::before {
-    content: "Video Length: ";
+.lengthIcon {
+    margin-left: auto;
+    width: 10px;
+    height: 10px;
+    clip-path: polygon(100% 50%, 0 0, 0 100%);
+    background-color: rgb(255, 255, 255);
 }
 
 .notReady {
